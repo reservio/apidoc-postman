@@ -41,45 +41,67 @@ class ParseAPIDoc {
     }
 
     _formatAPI(api) {
-        let url = api.url;
+        var url = api.url;
         var pattern = pathToRegexp(url, null);
         var matches = pattern.exec(url);
-
-        // Surrounds URL parameters with curly brackets -> :email with {email}
-        var pathKeys = [];
         for (var j = 1; matches && j < matches.length; j++) {
             var key = matches[j].substr(1);
-            url = url.replace(matches[j], '{'+ key +'}');
-            pathKeys.push(key);
+            url = url.replace(matches[j], '{' + key + '}');
         }
 
         api.url = url;
         api.type = upperCase(api.type);
-        return {
+
+        var atts = {
             name: api.title,
             request: {
                 method: api.type,
-                header: [
-                    {
-                        key: 'Content-Type',
-                        value: 'application/json'
-                    },
-                    {
-                        key: 'Accept',
-                        value: 'application/json'
-                    }
-                ],
+                header: [{
+                    key: 'Content-Type',
+                    value: 'application/json'
+                }, {
+                    key: 'Accept',
+                    value: 'application/json'
+                }],
                 url: {
-                    raw: `http://{{host}}${url}`,
+                    raw: 'http://{{host}}' + url,
                     protocol: 'http',
-                    host: [
-                        '{{host}}'
-                    ],
+                    host: ['{{host}}'],
                     path: url.split('/')
                 },
                 description: this._formatAPIDescription(api)
             }
         };
+
+        if (typeof api.header !== 'undefined' && typeof api.header.fields.Header !== 'undefined') {
+            for (var ii = 0 ; ii < api.header.fields.Header.length ; ii++) {
+                var header = api.header.fields.Header[ii];
+
+                var isKey = false;
+                atts.request.header.forEach(function (line) {
+                    if (line.key === header.field) {
+                        line.value = header.defaultValue;
+                        isKey = true;
+                    }
+                });
+                if (isKey) {
+                    continue;
+                }
+
+                atts.request.header.push({
+                    key: header.field,
+                    value: header.defaultValue.replace('_', ' ')
+                });
+            }
+        }
+
+        if (typeof api.parameter !== 'undefined' && typeof api.parameter.examples !== 'undefined') {
+            atts.request.body = new Object();
+            atts.request.body.mode = 'raw';
+            atts.request.body.raw = api.parameter.examples[0].content;
+        }
+
+        return atts;
     }
 
     _formatMethodColor(method) {

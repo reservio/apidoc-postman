@@ -162,7 +162,8 @@ var ParseAPIDoc = function () {
 
         api.url = url;
         api.type = upperCase(api.type);
-        return {
+
+        var atts = {
             name: api.title,
             request: {
                 method: api.type,
@@ -182,6 +183,36 @@ var ParseAPIDoc = function () {
                 description: this._formatAPIDescription(api)
             }
         };
+
+        if (typeof api.header !== 'undefined' && typeof api.header.fields.Header !== 'undefined') {
+            for (var ii = 0; ii < api.header.fields.Header.length; ii++) {
+                var header = api.header.fields.Header[ii];
+
+                var isKey = false;
+                atts.request.header.forEach(function (line) {
+                    if (line.key === header.field) {
+                        line.value = header.defaultValue;
+                        isKey = true;
+                    }
+                });
+                if (isKey) {
+                    continue;
+                }
+
+                atts.request.header.push({
+                    key: header.field,
+                    value: header.defaultValue.replace('_', ' ')
+                });
+            }
+        }
+
+        if (typeof api.parameter !== 'undefined' && typeof api.parameter.examples !== 'undefined') {
+            atts.request.body = new Object();
+            atts.request.body.mode = 'raw';
+            atts.request.body.raw = api.parameter.examples[0].content;
+        }
+
+        return atts;
     };
 
     ParseAPIDoc.prototype._formatMethodColor = function _formatMethodColor(method) {
