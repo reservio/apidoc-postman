@@ -41,45 +41,74 @@ class ParseAPIDoc {
     }
 
     _formatAPI(api) {
-        let url = api.url;
+        var url = api.url;
         var pattern = pathToRegexp(url, null);
         var matches = pattern.exec(url);
-
-        // Surrounds URL parameters with curly brackets -> :email with {email}
-        var pathKeys = [];
         for (var j = 1; matches && j < matches.length; j++) {
             var key = matches[j].substr(1);
-            url = url.replace(matches[j], '{'+ key +'}');
-            pathKeys.push(key);
+            url = url.replace(matches[j], '{' + key + '}');
         }
 
         api.url = url;
         api.type = upperCase(api.type);
-        return {
+
+        var atts = {
             name: api.title,
             request: {
                 method: api.type,
-                header: [
-                    {
-                        key: 'Content-Type',
-                        value: 'application/json'
-                    },
-                    {
-                        key: 'Accept',
-                        value: 'application/json'
-                    }
-                ],
+                header: [{
+                    key: 'Content-Type',
+                    value: 'application/json'
+                }, {
+                    key: 'Accept',
+                    value: 'application/json'
+                }],
                 url: {
-                    raw: `http://{{host}}${url}`,
+                    raw: 'http://{{host}}' + url,
                     protocol: 'http',
-                    host: [
-                        '{{host}}'
-                    ],
+                    host: ['{{host}}'],
                     path: url.split('/')
                 },
                 description: this._formatAPIDescription(api)
             }
         };
+
+        // Adding header content
+        if (typeof api.header !== 'undefined' && typeof api.header.fields.Header !== 'undefined') {
+            var headerLength = api.header.fields.Header.length;
+
+            for (var ii = 0 ; ii < headerLength ; ii++) {
+                var header = api.header.fields.Header[ii];
+
+                var isKey = false;
+                // Rewriting existing keys by values from apiDoc annotations
+                atts.request.header.forEach(function (line) {
+                    if (line.key === header.field) {
+                        line.value = header.defaultValue;
+                        isKey = true;
+                    }
+                });
+                if (isKey) {
+                    continue;
+                }
+
+                // Adding new keys with values from apiDoc annotations
+                atts.request.header.push({
+                    key: header.field,
+                    // Spaces are not supported for default value. Replaced by '_' in apiDoc annotations.
+                    value: header.defaultValue.replace('_', ' ')
+                });
+            }
+        }
+
+        // Adding body content
+        if (typeof api.parameter !== 'undefined' && typeof api.parameter.examples !== 'undefined') {
+            atts.request.body = {};
+            atts.request.body.mode = 'raw';
+            atts.request.body.raw = api.parameter.examples[0].content;
+        }
+
+        return atts;
     }
 
     _formatMethodColor(method) {

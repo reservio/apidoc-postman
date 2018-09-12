@@ -162,7 +162,8 @@ var ParseAPIDoc = function () {
 
         api.url = url;
         api.type = upperCase(api.type);
-        return {
+
+        var atts = {
             name: api.title,
             request: {
                 method: api.type,
@@ -182,6 +183,43 @@ var ParseAPIDoc = function () {
                 description: this._formatAPIDescription(api)
             }
         };
+
+        // Adding header content
+        if (typeof api.header !== 'undefined' && typeof api.header.fields.Header !== 'undefined') {
+            var headerLength = api.header.fields.Header.length;
+
+            for (var ii = 0; ii < headerLength; ii++) {
+                var header = api.header.fields.Header[ii];
+
+                var isKey = false;
+                // Rewriting existing keys by values from apiDoc annotations
+                atts.request.header.forEach(function (line) {
+                    if (line.key === header.field) {
+                        line.value = header.defaultValue;
+                        isKey = true;
+                    }
+                });
+                if (isKey) {
+                    continue;
+                }
+
+                // Adding new keys with values from apiDoc annotations
+                atts.request.header.push({
+                    key: header.field,
+                    // Spaces are not supported for default value. Replaced by '_' in apiDoc annotations.
+                    value: header.defaultValue.replace('_', ' ')
+                });
+            }
+        }
+
+        // Adding body content
+        if (typeof api.parameter !== 'undefined' && typeof api.parameter.examples !== 'undefined') {
+            atts.request.body = {};
+            atts.request.body.mode = 'raw';
+            atts.request.body.raw = api.parameter.examples[0].content;
+        }
+
+        return atts;
     };
 
     ParseAPIDoc.prototype._formatMethodColor = function _formatMethodColor(method) {
