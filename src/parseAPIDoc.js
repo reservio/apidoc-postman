@@ -103,9 +103,9 @@ class ParseAPIDoc {
 
         // Adding body content
         if (typeof api.parameter !== 'undefined' && typeof api.parameter.examples !== 'undefined') {
+            atts.request.body = {};
             if (atts.request.header[0].value === 'application/x-www-form-urlencoded') {
                 // Body with urlencoded data (Oauth2 presenter)
-                atts.request.body = {};
                 atts.request.body.mode = 'urlencoded';
 
                 var content = api.parameter.examples[0].content.split(',\n');
@@ -121,7 +121,6 @@ class ParseAPIDoc {
                 atts.request.body.urlencoded = data;
             } else {
                 // Body with raw data (other presenters)
-                atts.request.body = {};
                 atts.request.body.mode = 'raw';
                 atts.request.body.raw = api.parameter.examples[0].content;
             }
