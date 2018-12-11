@@ -224,8 +224,8 @@ var ParseAPIDoc = function () {
                 content.forEach(function (line) {
                     var attributes = line.split(': ');
                     var object = {};
-                    object['key'] = attributes[0];
-                    object['value'] = attributes[1];
+                    object.key = attributes[0];
+                    object.value = attributes[1];
                     data.push(object);
                 });
 
